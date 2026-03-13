@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import {
   Heart,
   MessageCircle,
@@ -16,7 +16,17 @@ import {
   Wind,
   MoreHorizontal,
   Bookmark,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
+
+export interface Comment {
+  id: number
+  author: string
+  initials: string
+  content: string
+  time: string
+}
 
 interface Post {
   id: number
@@ -36,15 +46,16 @@ interface Post {
   liked: boolean
   bookmarked: boolean
   image?: string
+  commentList?: Comment[]
 }
 
 const initialPosts: Post[] = [
   {
     id: 1,
-    author: "Aria Chen",
-    initials: "AC",
+    author: "Anuj Baghele",
+    initials: "AB",
     role: "Weather Enthusiast",
-    location: "Jakarta, Indonesia",
+    location: "Mumbai, Maharashtra",
     time: "2 hours ago",
     content:
       "Just experienced the most intense rainfall in Jakarta this month! The rain gauge recorded 45mm in just one hour. Stay safe everyone and remember to check flood alerts in your area.",
@@ -127,6 +138,55 @@ const trendingTopics = [
 export default function CommunityPage() {
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [newPost, setNewPost] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [expandedPostId, setExpandedPostId] = useState<number | null>(null)
+  const [commentText, setCommentText] = useState("")
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [postLocation, setPostLocation] = useState("Your Location")
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const EMOJIS = ["😀", "😂", "🥰", "😎", "🤔", "🙌", "👍", "🔥", "🌧️", "🌤️", "⛈️", "❄️"]
+
+  const POSTS_PER_PAGE = 2
+
+  const indexOfLastPost = currentPage * POSTS_PER_PAGE
+  const indexOfFirstPost = indexOfLastPost - POSTS_PER_PAGE
+  const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost)
+  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
+
+  function toggleCommentSection(postId: number) {
+    if (expandedPostId === postId) {
+      setExpandedPostId(null)
+      setCommentText("")
+    } else {
+      setExpandedPostId(postId)
+      setCommentText("")
+    }
+  }
+
+  function submitComment(postId: number) {
+    if (!commentText.trim()) return
+    const newCommentObj: Comment = {
+      id: Date.now(),
+      author: "You",
+      initials: "YO",
+      content: commentText,
+      time: "Just now",
+    }
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              comments: p.comments + 1,
+              commentList: [...(p.commentList || []), newCommentObj],
+            }
+          : p
+      )
+    )
+    setCommentText("")
+  }
 
   function handleLike(postId: number) {
     setPosts((prev) =>
@@ -147,13 +207,13 @@ export default function CommunityPage() {
   }
 
   function handleSubmitPost() {
-    if (!newPost.trim()) return
+    if (!newPost.trim() && !selectedImage) return
     const post: Post = {
       id: Date.now(),
       author: "You",
       initials: "YO",
       role: "Community Member",
-      location: "Your Location",
+      location: postLocation,
       time: "Just now",
       content: newPost,
       tag: "General",
@@ -165,9 +225,26 @@ export default function CommunityPage() {
       shares: 0,
       liked: false,
       bookmarked: false,
+      image: selectedImage ? selectedImage : undefined,
     }
     setPosts((prev) => [post, ...prev])
     setNewPost("")
+    setSelectedImage(null)
+    setPostLocation("Your Location")
+    setShowEmojiPicker(false)
+    setCurrentPage(1)
+  }
+
+  function handleLocationClick() {
+    const loc = window.prompt("Enter your location:", postLocation)
+    if (loc) {
+      setPostLocation(loc)
+    }
+  }
+
+  function onEmojiClick(emoji: string) {
+    setNewPost((prev) => prev + emoji)
+    setShowEmojiPicker(false)
   }
 
   return (
@@ -186,7 +263,7 @@ export default function CommunityPage() {
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex gap-3">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#4a6cf7] text-xs font-bold text-[#ffffff]">
-              YO
+              AB
             </div>
             <div className="flex flex-1 flex-col gap-3">
               <textarea
@@ -200,10 +277,41 @@ export default function CommunityPage() {
                 placeholder="Share your weather experience..."
                 className="min-h-[80px] w-full resize-none rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#4a6cf7] focus:outline-none focus:ring-1 focus:ring-[#4a6cf7]"
               />
-              <div className="flex items-center justify-between">
+              {selectedImage && (
+                <div className="relative mt-2 inline-block">
+                  <img src={selectedImage} alt="Preview" className="h-20 w-auto rounded-lg object-cover" />
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              {postLocation !== "Your Location" && (
+                <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Posting from: {postLocation}
+                </div>
+              )}
+              <div className="mt-2 flex items-center justify-between">
                 <div className="flex items-center gap-1">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setSelectedImage(URL.createObjectURL(file))
+                      }
+                      if (e.target) e.target.value = ''
+                    }}
+                  />
                   <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     aria-label="Add image"
                   >
@@ -211,23 +319,40 @@ export default function CommunityPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={handleLocationClick}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     aria-label="Add location"
                   >
                     <MapPin className="h-4 w-4" />
                   </button>
-                  <button
-                    type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    aria-label="Add emoji"
-                  >
-                    <Smile className="h-4 w-4" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      aria-label="Add emoji"
+                    >
+                      <Smile className="h-4 w-4" />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute top-10 left-0 z-10 grid grid-cols-4 gap-1 rounded-xl border border-border bg-card p-2 shadow-lg w-48">
+                        {EMOJIS.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => onEmojiClick(emoji)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleSubmitPost}
-                  disabled={!newPost.trim()}
+                  disabled={!newPost.trim() && !selectedImage}
                   className="flex items-center gap-2 rounded-xl bg-[#4a6cf7] px-5 py-2 text-sm font-medium text-[#ffffff] transition-opacity hover:opacity-90 disabled:opacity-40"
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -239,7 +364,7 @@ export default function CommunityPage() {
         </div>
 
         {/* Posts feed */}
-        {posts.map((post) => (
+        {currentPosts.map((post) => (
           <article
             key={post.id}
             className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
@@ -293,6 +418,11 @@ export default function CommunityPage() {
             <p className="mt-3 text-sm leading-relaxed text-foreground">
               {post.content}
             </p>
+            {post.image && (
+              <div className="mt-3">
+                <img src={post.image} alt="Post attachment" className="max-h-96 w-full rounded-xl object-cover" />
+              </div>
+            )}
 
             {/* Post actions */}
             <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
@@ -300,11 +430,10 @@ export default function CommunityPage() {
                 <button
                   type="button"
                   onClick={() => handleLike(post.id)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    post.liked
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${post.liked
                       ? "bg-[#fef2f2] text-[#ef4444]"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
+                    }`}
                   aria-label={post.liked ? "Unlike" : "Like"}
                 >
                   <Heart
@@ -314,6 +443,7 @@ export default function CommunityPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => toggleCommentSection(post.id)}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   aria-label="Comment"
                 >
@@ -332,11 +462,10 @@ export default function CommunityPage() {
               <button
                 type="button"
                 onClick={() => handleBookmark(post.id)}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                  post.bookmarked
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${post.bookmarked
                     ? "text-[#4a6cf7]"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                }`}
+                  }`}
                 aria-label={post.bookmarked ? "Remove bookmark" : "Bookmark"}
               >
                 <Bookmark
@@ -344,8 +473,84 @@ export default function CommunityPage() {
                 />
               </button>
             </div>
+
+            {/* Comment Section */}
+            {expandedPostId === post.id && (
+              <div className="mt-4 border-t border-border pt-4">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#4a6cf7] text-[10px] font-bold text-[#ffffff]">
+                    YO
+                  </div>
+                  <div className="flex flex-1 items-center gap-2">
+                    <input
+                      type="text"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitComment(post.id)
+                      }}
+                      placeholder="Write a comment..."
+                      className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-[#4a6cf7] focus:outline-none focus:ring-1 focus:ring-[#4a6cf7]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => submitComment(post.id)}
+                      disabled={!commentText.trim()}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#4a6cf7] text-[#ffffff] transition-opacity hover:opacity-90 disabled:opacity-40"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                {post.commentList && post.commentList.length > 0 && (
+                  <div className="mt-4 flex flex-col gap-3">
+                    {post.commentList.map((comment) => (
+                      <div key={comment.id} className="flex gap-3">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-foreground">
+                          {comment.initials}
+                        </div>
+                        <div className="flex-1 rounded-xl bg-secondary px-3 py-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-foreground">{comment.author}</span>
+                            <span className="text-[10px] text-muted-foreground">{comment.time}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-foreground">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </article>
         ))}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-2 flex items-center justify-between pt-4 pb-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50 disabled:pointer-events-none shadow-sm"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
+            <span className="text-sm font-medium text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50 disabled:pointer-events-none shadow-sm"
+              aria-label="Next page"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right sidebar - trending */}

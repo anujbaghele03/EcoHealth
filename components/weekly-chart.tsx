@@ -11,6 +11,14 @@ import {
   ReferenceDot,
   Label,
 } from "recharts"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useState } from "react"
+import { toast } from "sonner"
 
 const data = [
   { week: "Week 1", temp: 10 },
@@ -20,28 +28,46 @@ const data = [
 ]
 
 export default function WeeklyChart() {
+  const [location, setLocation] = useState("Nagpur, Maharashtra")
+
+  const handleLocationChange = (newLocation: string) => {
+    setLocation(newLocation)
+    toast.success(`Location changed to ${newLocation}`)
+  }
+
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between pb-4">
         <h2 className="text-lg font-bold text-foreground">
           Average Weekly Temperature
         </h2>
-        <div className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-[#4a6cf7]">
-          Nagpur, Maharashtra
-          <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-[#4a6cf7] transition-colors hover:bg-secondary">
+              {location}
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {["Nagpur, Maharashtra", "Mumbai, Maharashtra", "Pune, Maharashtra", "Delhi, NCR"].map((loc) => (
+              <DropdownMenuItem key={loc} onClick={() => handleLocationChange(loc)}>
+                {loc}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <ResponsiveContainer width="100%" height={260}>
