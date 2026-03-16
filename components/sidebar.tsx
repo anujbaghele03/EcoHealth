@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Leaf,
+  Heart,
 } from "lucide-react"
 
 const mainNav = [
@@ -18,6 +19,7 @@ const mainNav = [
   { label: "Map", href: "/dashboard/map", icon: Map },
   { label: "Calendar", href: "/dashboard/calendar", icon: Calendar },
   { label: "Community", href: "/dashboard/community", icon: Users },
+  { label: "Health Tips", href: "/dashboard/health-tips", icon: Heart },
   { label: "About", href: "/dashboard/about", icon: Info },
 ]
 
@@ -52,11 +54,10 @@ export default function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isActive
                       ? "bg-[#eef0ff] text-[#4a6cf7]"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <item.icon className="h-[18px] w-[18px]" />
                   {item.label}
@@ -78,11 +79,10 @@ export default function Sidebar() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isActive
                         ? "bg-[#eef0ff] text-[#4a6cf7]"
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <item.icon className="h-[18px] w-[18px]" />
                     {item.label}
